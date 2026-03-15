@@ -90,62 +90,6 @@ jobs:
         with:
           path: dist
 
-  create-sdist:
-    needs: [base-package]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        package: [polars-runtime-32, polars-runtime-64, polars-runtime-compat]
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.sha }}
-
-      - name: Download base package
-        uses: actions/download-artifact@v7
-        with:
-          path: dist
-          merge-multiple: true
-
-      # Avoid potential out-of-memory errors
-      - name: Set swap space for Linux
-        uses: pierotofy/set-swap-space@master
-        with:
-          swap-size-gb: 10
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install yq
-        run: |
-          pip install --force-reinstall --no-dependencies dist/polars-*.whl
-          rm -rf dist/*
-          pip install yq
-
-      - name: Create source distribution
-        uses: PyO3/maturin-action@v1
-        with:
-          command: sdist
-          args: >
-            --manifest-path py-polars/runtime/${{ matrix.package }}/Cargo.toml
-            --out dist
-          maturin-version: 1.8.3
-
-      - name: Test sdist
-        run: |
-          pip install --force-reinstall --verbose dist/*.tar.gz
-          python -c 'import polars; polars.show_versions()'
-
-      - name: Upload sdist
-        uses: actions/upload-artifact@v6
-        with:
-          name: sdist-${{ matrix.package }}
-          path: dist/*.tar.gz
-
   build-wheels:
     needs: [base-package]
     runs-on: ${{ matrix.os }}
@@ -153,7 +97,7 @@ jobs:
       fail-fast: false
       matrix:
         package: [polars-runtime-32, polars-runtime-64, polars-runtime-compat]
-        job_config: [linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, macos-x64, macos-arm64, win-x64, win-arm64]
+        job_config: [linux-x64]
         include:
           - job_config: linux-x64
             os: ubuntu-latest
